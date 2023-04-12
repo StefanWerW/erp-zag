@@ -1,7 +1,7 @@
 import { db } from "@/firebase/config";
 import { Auftrag } from "@/types/Auftrag";
 import { collection, getDocs, limit, orderBy, query } from "firebase/firestore";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 
 export default function useFetchAuftrag() {
   const [loading, setLoading] = useState<boolean>(true);
@@ -9,24 +9,32 @@ export default function useFetchAuftrag() {
   const [auftrag, setAuftrag] = useState<Auftrag[]>();
   const [auftragLimit, setAuftragLimit] = useState<number>(5);
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const docsSnapshot = await getDocs(
-          query(collection(db, "auftrag"), orderBy("code", "desc"))
-        );
-        const data: any[] = docsSnapshot.docs.map((doc) => {
-          return { ...doc.data(), id: doc.id };
-        });
-        setAuftrag(data);
-      } catch (error) {
-        setError("Failed to load aufträge");
-      } finally {
-        setLoading(false);
-      }
+  const fetchData = useCallback(async () => {
+    try {
+      const docsSnapshot = await getDocs(
+        query(collection(db, "auftrag"), orderBy("code", "desc"))
+      );
+      const data: any[] = docsSnapshot.docs.map((doc) => {
+        return { ...doc.data(), id: doc.id };
+      });
+      setAuftrag(data);
+    } catch (error) {
+      setError("Failed to load aufträge");
+    } finally {
+      setLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
     fetchData();
   }, [auftragLimit]);
 
-  return { loading, error, auftrag, setAuftragLimit, auftragLimit };
+  return {
+    loading,
+    error,
+    auftrag,
+    setAuftragLimit,
+    auftragLimit,
+    refetch: fetchData,
+  };
 }
